@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
+import toast, { Toaster } from "react-hot-toast"; // ✅ TOAST ADDED
 import {
   collection,
   addDoc,
@@ -86,6 +87,7 @@ export default function TodoList() {
       };
       const docRef = await addDoc(collection(db, "tasks"), newTask);
       setTasks([...tasks, { id: docRef.id, ...newTask }]);
+      toast.success("Tugas berhasil ditambahkan!"); // ✅ TOAST
     }
   };
 
@@ -114,6 +116,7 @@ export default function TodoList() {
       };
       await updateDoc(doc(db, "tasks", task.id), updatedTask);
       setTasks(tasks.map((t) => (t.id === task.id ? updatedTask : t)));
+      toast.success("Tugas berhasil diperbarui!"); // ✅ TOAST
     }
   };
 
@@ -127,6 +130,7 @@ export default function TodoList() {
     if (result.isConfirmed) {
       await deleteDoc(doc(db, "tasks", id));
       setTasks(tasks.filter((task) => task.id !== id));
+      toast.success("Tugas berhasil dihapus!"); // ✅ TOAST
     }
   };
 
@@ -148,8 +152,10 @@ export default function TodoList() {
 
   return (
     <div className="max-w-md mx-auto mt-10 p-4 bg-white shadow-md rounded-lg">
-      <h1 className="text-2xl text-emerald-500 font-bold mb-4">To-Do List Rajaie</h1>
-
+      <Toaster position="top-right" /> {/* ✅ TOASTER PROVIDER */}
+      <h1 className="text-2xl text-emerald-500 font-bold mb-4">
+        To-Do List Rajaie
+      </h1>
       <div className="flex justify-between items-center mb-4">
         <button
           onClick={addTask}
@@ -167,7 +173,6 @@ export default function TodoList() {
           <option value="not_done">Belum</option>
         </select>
       </div>
-
       <ul>
         <AnimatePresence>
           {filteredTasks.map((task) => {
