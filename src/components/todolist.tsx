@@ -159,7 +159,7 @@ export default function TodoList() {
         </button>
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value as any)}
+          onChange={(e) => setFilter(e.target.value as typeof filter)}
           className="bg-slate-500 text-white px-4 py-2 rounded"
         >
           <option value="all">Semua</option>
