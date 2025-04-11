@@ -3,13 +3,13 @@ import { getFirestore } from "firebase/firestore";
 
 // isi konfigurasi sesuai dengan konfigurasi firebase kalian
 const firebaseConfig = {
-  apiKey: "AIzaSyACCeZOQy2X5zPwxu2P1AmRy4HZb1s4RbI",
-  authDomain: "to-do-list-f65d5.firebaseapp.com",
-  projectId: "to-do-list-f65d5",
-  storageBucket: "to-do-list-f65d5.firebasestorage.app",
-  messagingSenderId: "921081749662",
-  appId: "1:921081749662:web:1e4db4a3eccf551675db8f",
-  measurementId: "G-BZTTTD515S",
+  apiKey: "AIzaSyB83SH-1lA8JYR6Htm229DuaEksb5IAzJ4",
+  authDomain: "to-do-list-ea930.firebaseapp.com",
+  projectId: "to-do-list-ea930",
+  storageBucket: "to-do-list-ea930.firebasestorage.app",
+  messagingSenderId: "263789095964",
+  appId: "1:263789095964:web:6d578e4f926e83f5f843d9",
+  measurementId: "G-JWF4G0D4QW",
 };
 
 // Inisialisasi Firebase
