@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
-import toast, { Toaster } from "react-hot-toast"; // ✅ TOAST ADDED
+import toast, { Toaster } from "react-hot-toast";
 import {
   collection,
   addDoc,
@@ -23,19 +23,26 @@ type Task = {
 
 export default function TodoList() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [timeRemaining, setTimeRemaining] = useState<{ [key: string]: string }>(
-    {}
-  );
+  const [timeRemaining, setTimeRemaining] = useState<{ [key: string]: string }>({});
   const [filter, setFilter] = useState<"all" | "done" | "not_done">("all");
 
   useEffect(() => {
     const fetchTasks = async () => {
-      const querySnapshot = await getDocs(collection(db, "tasks"));
-      const tasksData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Task[];
-      setTasks(tasksData);
+      await toast.promise(
+        (async () => {
+          const querySnapshot = await getDocs(collection(db, "tasks"));
+          const tasksData = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Task[];
+          setTasks(tasksData);
+        })(),
+        {
+          loading: "Memuat tugas...",
+          success: "Tugas dimuat!",
+          error: "Gagal memuat tugas.",
+        }
+      );
     };
     fetchTasks();
   }, []);
@@ -87,7 +94,7 @@ export default function TodoList() {
       };
       const docRef = await addDoc(collection(db, "tasks"), newTask);
       setTasks([...tasks, { id: docRef.id, ...newTask }]);
-      toast.success("Tugas berhasil ditambahkan!"); // ✅ TOAST
+      toast.success("Tugas berhasil ditambahkan!");
     }
   };
 
@@ -116,7 +123,7 @@ export default function TodoList() {
       };
       await updateDoc(doc(db, "tasks", task.id), updatedTask);
       setTasks(tasks.map((t) => (t.id === task.id ? updatedTask : t)));
-      toast.success("Tugas berhasil diperbarui!"); // ✅ TOAST
+      toast.success("Tugas berhasil diperbarui!");
     }
   };
 
@@ -130,7 +137,7 @@ export default function TodoList() {
     if (result.isConfirmed) {
       await deleteDoc(doc(db, "tasks", id));
       setTasks(tasks.filter((task) => task.id !== id));
-      toast.success("Tugas berhasil dihapus!"); // ✅ TOAST
+      toast.success("Tugas berhasil dihapus!");
     }
   };
 
@@ -142,6 +149,7 @@ export default function TodoList() {
     await updateDoc(doc(db, "tasks", id), {
       completed: updatedTasks.find((task) => task.id === id)?.completed,
     });
+    toast.success("Status tugas diperbarui!");
   };
 
   const filteredTasks = tasks.filter((task) => {
@@ -152,10 +160,10 @@ export default function TodoList() {
 
   return (
     <div className="max-w-md mx-auto mt-10 p-4 bg-white shadow-md rounded-lg">
-      <Toaster position="top-right" /> {/* ✅ TOASTER PROVIDER */}
-      <h1 className="text-2xl text-emerald-500 font-bold mb-4">
-        To-Do List Rajaie
-      </h1>
+      <Toaster position="top-right" />
+
+      <h1 className="text-2xl text-emerald-500 font-bold mb-4">To-Do List Rajaie</h1>
+
       <div className="flex justify-between items-center mb-4">
         <button
           onClick={addTask}
@@ -173,6 +181,7 @@ export default function TodoList() {
           <option value="not_done">Belum</option>
         </select>
       </div>
+
       <ul>
         <AnimatePresence>
           {filteredTasks.map((task) => {
