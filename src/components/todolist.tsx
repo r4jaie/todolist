@@ -13,6 +13,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../app/lib/firebase";
+import { PlusCircle, Edit3, Trash2 } from "lucide-react";
 
 type Task = {
   id: string;
@@ -159,39 +160,41 @@ export default function TodoList() {
   });
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-4 bg-white shadow-md rounded-lg">
+    <div className="max-w-xl mx-auto mt-12 p-6 bg-white/80 backdrop-blur-md shadow-xl rounded-2xl">
       <Toaster position="top-right" />
 
-      <h1 className="text-2xl text-emerald-500 font-bold mb-4">To-Do List Rajaie</h1>
+      <h1 className="text-3xl font-bold text-center text-emerald-600 mb-6">
+        ✅ To-Do List
+      </h1>
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-6">
         <button
           onClick={addTask}
-          className="bg-slate-500 text-white px-4 py-2 rounded"
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl shadow transition-all"
         >
-          Tambah Tugas
+          <PlusCircle className="w-5 h-5" /> Tambah
         </button>
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as typeof filter)}
-          className="bg-slate-500 text-white px-4 py-2 rounded"
+          className="bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-sm text-black"
         >
-          <option value="all">Semua</option>
-          <option value="done">Selesai</option>
-          <option value="not_done">Belum</option>
+          <option value="all" className="text-black">Semua</option>
+          <option value="done" className="text-black">Selesai</option>
+          <option value="not_done" className="text-black">Belum</option>
         </select>
       </div>
 
-      <ul>
+      <ul className="space-y-3">
         <AnimatePresence>
           {filteredTasks.map((task) => {
             const timeLeft = calculateTimeRemaining(task.deadline);
             const isExpired = timeLeft === "Waktu habis!";
             const taskColor = task.completed
-              ? "bg-green-200"
+              ? "bg-emerald-100"
               : isExpired
-              ? "bg-red-200"
-              : "bg-yellow-200";
+              ? "bg-rose-100"
+              : "bg-yellow-100";
 
             return (
               <motion.li
@@ -200,38 +203,38 @@ export default function TodoList() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
-                className={`flex flex-col justify-between p-2 border-b rounded-lg ${taskColor}`}
+                className={`p-4 rounded-xl shadow-md ${taskColor}`}
               >
                 <div className="flex justify-between items-center">
                   <span
                     onClick={() => toggleTask(task.id)}
-                    className={`cursor-pointer transition-500 ${
+                    className={`cursor-pointer text-lg transition-all ${
                       task.completed
-                        ? "line-through text-gray-500"
-                        : "font-semibold text-gray-700"
+                        ? "line-through text-gray-400"
+                        : "font-medium text-gray-800"
                     }`}
                   >
                     {task.text}
                   </span>
-                  <div className="flex gap-1">
+                  <div className="flex gap-2">
                     <button
                       onClick={() => editTask(task)}
-                      className="text-white px-2 rounded bg-blue-600 hover:bg-blue-800"
+                      className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white"
                     >
-                      Edit
+                      <Edit3 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => deleteTask(task.id)}
-                      className="text-white px-2 rounded bg-red-600 hover:bg-red-800"
+                      className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white"
                     >
-                      Hapus
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                <p className="text-sm text-gray-700">
-                  Deadline: {new Date(task.deadline).toLocaleString()}
+                <p className="text-sm text-gray-600">
+                  🗓️ {new Date(task.deadline).toLocaleString()}
                 </p>
-                <p className="text-xs font-semibold text-gray-700">
+                <p className="text-xs text-gray-700 font-semibold">
                   ⏳ {timeRemaining[task.id] || "Menghitung..."}
                 </p>
               </motion.li>
