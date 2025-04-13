@@ -305,7 +305,7 @@ export default function TodoList() {
                   darkMode ? "text-emerald-400" : "text-emerald-600"
                 }`}
               >
-                To-Do List Rajaie
+                To-Do List
               </h1>
               <p className={darkMode ? "text-gray-400" : "text-gray-500"}>
                 Kelola tugas Anda dengan mudah
