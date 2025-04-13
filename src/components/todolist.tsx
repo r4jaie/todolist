@@ -1,5 +1,4 @@
 // file: todolist.tsx
-// file: todolist.tsx
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,6 +28,39 @@ export default function TodoList() {
   );
   const [filter, setFilter] = useState<"all" | "done" | "not_done">("all");
   const [darkMode, setDarkMode] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedTasks((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const deleteSelectedTasks = async (): Promise<void> => {
+    if (selectedTasks.length === 0) return;
+
+    const result = await Swal.fire({
+      title: `Hapus ${selectedTasks.length} tugas?`,
+      text: `Tindakan ini tidak dapat dibatalkan!`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, hapus semua!",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#059669",
+      cancelButtonColor: "#ef4444",
+    });
+
+    if (result.isConfirmed) {
+      await Promise.all(
+        selectedTasks.map((id) => deleteDoc(doc(db, "tasks", id)))
+      );
+      setTasks((prev) =>
+        prev.filter((task) => !selectedTasks.includes(task.id))
+      );
+      setSelectedTasks([]);
+      toast.success("Tugas terpilih berhasil dihapus!");
+    }
+  };
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -361,6 +393,19 @@ export default function TodoList() {
             </select>
           </div>
 
+          {selectedTasks.length > 0 && (
+            <button
+              onClick={deleteSelectedTasks}
+              className={`mb-4 w-full py-3 rounded-lg font-medium shadow-md transition-colors duration-300 text-white ${
+                darkMode
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-red-500 hover:bg-red-600"
+              }`}
+            >
+              Hapus {selectedTasks.length} Tugas Terpilih
+            </button>
+          )}
+
           <ul className="space-y-4">
             <AnimatePresence>
               {filteredTasks.length === 0 ? (
@@ -402,6 +447,42 @@ export default function TodoList() {
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3 flex-1">
+                          <input
+                            type="checkbox"
+                            id={`checkbox-${task.id}`}
+                            checked={selectedTasks.includes(task.id)}
+                            onChange={() => toggleSelect(task.id)}
+                            className="peer hidden"
+                          />
+                          <label
+                            htmlFor={`checkbox-${task.id}`}
+                            className={`w-5 h-5 flex items-center justify-center border rounded cursor-pointer transition-colors duration-200
+                              ${
+                                selectedTasks.includes(task.id)
+                                  ? darkMode
+                                    ? "bg-emerald-600 border-emerald-600"
+                                    : "bg-emerald-500 border-emerald-500"
+                                  : darkMode
+                                  ? "border-gray-500 hover:border-emerald-400"
+                                  : "border-gray-300 hover:border-emerald-500"
+                              }
+                            `}
+                          >
+                            {selectedTasks.includes(task.id) && (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-3 w-3 text-white"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            )}
+                          </label>
                           <button
                             onClick={() => toggleTask(task.id)}
                             className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors duration-200 ${
