@@ -1,6 +1,6 @@
 // file: todolist.tsx
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import toast, { Toaster } from "react-hot-toast";
@@ -19,6 +19,7 @@ type Task = {
   text: string;
   completed: boolean;
   deadline: string;
+  priority?: number;
 };
 
 export default function TodoList() {
@@ -29,6 +30,58 @@ export default function TodoList() {
   const [filter, setFilter] = useState<"all" | "done" | "not_done">("all");
   const [darkMode, setDarkMode] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [isAllSelected, setIsAllSelected] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const sortTasksByPriority = (tasks: Task[]) => {
+    const now = new Date().getTime();
+
+    return [...tasks].sort((a, b) => {
+      // Tugas yang sudah selesai selalu di bawah
+      if (a.completed && !b.completed) return 1;
+      if (!a.completed && b.completed) return -1;
+
+      // Jika kedua tugas sudah selesai, urutkan berdasarkan deadline terbaru
+      if (a.completed && b.completed) {
+        return new Date(b.deadline).getTime() - new Date(a.deadline).getTime();
+      }
+
+      // Untuk tugas yang belum selesai, urutkan berdasarkan deadline terdekat
+      const aTime = new Date(a.deadline).getTime() - now;
+      const bTime = new Date(b.deadline).getTime() - now;
+
+      // Jika deadline sudah lewat, tampilkan di atas
+      if (aTime < 0 && bTime >= 0) return -1;
+      if (aTime >= 0 && bTime < 0) return 1;
+
+      // Urutkan berdasarkan waktu tersisa (yang lebih sedikit di atas)
+      return aTime - bTime;
+    });
+  };
+
+  // Fungsi long-press handler
+  const handleLongPress = (id: string) => {
+    longPressTimer.current = setTimeout(() => {
+      setIsSelectionMode(true);
+      toggleSelect(id);
+    }, 500); // 500ms untuk long press
+  };
+
+  const clearLongPress = () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  };
+
+  // Pilih semua tugas
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedTasks([]);
+      setIsSelectionMode(false); // <- keluar dari mode seleksi saat batal semua
+    } else {
+      setSelectedTasks(tasks.map((task) => task.id));
+    }
+    setIsAllSelected(!isAllSelected);
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedTasks((prev) =>
@@ -273,11 +326,13 @@ export default function TodoList() {
     toast.success("Status tugas diperbarui!");
   };
 
-  const filteredTasks = tasks.filter((task) => {
-    if (filter === "done") return task.completed;
-    if (filter === "not_done") return !task.completed;
-    return true;
-  });
+  const filteredTasks = sortTasksByPriority(
+    tasks.filter((task) => {
+      if (filter === "done") return task.completed;
+      if (filter === "not_done") return !task.completed;
+      return true;
+    })
+  );
 
   return (
     <div
@@ -297,7 +352,6 @@ export default function TodoList() {
               className: darkMode ? "!bg-gray-700 !text-white" : "",
             }}
           />
-
           <div className="flex justify-between items-start mb-6">
             <div className="flex flex-col">
               <h1
@@ -353,7 +407,6 @@ export default function TodoList() {
               )}
             </button>
           </div>
-
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <button
               onClick={addTask}
@@ -377,7 +430,6 @@ export default function TodoList() {
               </svg>
               Tambah Tugas
             </button>
-
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as typeof filter)}
@@ -392,20 +444,45 @@ export default function TodoList() {
               <option value="not_done">Tugas Belum Selesai</option>
             </select>
           </div>
+          {isSelectionMode && (
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+              <button
+                onClick={toggleSelectAll}
+                className={`w-full sm:w-auto px-6 py-3 rounded-lg shadow-md transition-colors duration-300 flex items-center justify-center gap-2 ${
+                  darkMode
+                    ? "bg-gray-600 hover:bg-gray-700 text-white"
+                    : "bg-gray-500 hover:bg-gray-600 text-white"
+                }`}
+              >
+                {isAllSelected ? "Batal Pilih Semua" : "Pilih Semua"}
+              </button>
 
-          {selectedTasks.length > 0 && (
-            <button
-              onClick={deleteSelectedTasks}
-              className={`mb-4 w-full py-3 rounded-lg font-medium shadow-md transition-colors duration-300 text-white ${
-                darkMode
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-red-500 hover:bg-red-600"
-              }`}
-            >
-              Hapus {selectedTasks.length} Tugas Terpilih
-            </button>
-          )}
-
+              <button
+                onClick={deleteSelectedTasks}
+                className={`w-full sm:w-auto px-6 py-3 rounded-lg shadow-md transition-colors duration-300 flex items-center justify-center gap-2 ${
+                  darkMode
+                    ? "bg-red-600 hover:bg-red-700 text-white"
+                    : "bg-red-500 hover:bg-red-600 text-white"
+                }`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+                Hapus {selectedTasks.length} Tugas Terpilih
+              </button>
+            </div>
+          )}{" "}
           <ul className="space-y-4">
             <AnimatePresence>
               {filteredTasks.length === 0 ? (
@@ -420,6 +497,10 @@ export default function TodoList() {
                 </motion.div>
               ) : (
                 filteredTasks.map((task) => {
+                  const isDueSoon =
+                    !task.completed &&
+                    new Date(task.deadline).getTime() - new Date().getTime() <
+                      24 * 60 * 60 * 1000;
                   const timeLeft = calculateTimeRemaining(task.deadline);
                   const isExpired = timeLeft === "Waktu habis!";
                   const taskColor = task.completed
@@ -430,6 +511,10 @@ export default function TodoList() {
                     ? darkMode
                       ? "bg-red-900 border-l-4 border-red-500"
                       : "bg-red-50 border-l-4 border-red-500"
+                    : isDueSoon
+                    ? darkMode
+                      ? "bg-purple-900 border-l-4 border-purple-500"
+                      : "bg-purple-50 border-l-4 border-purple-500"
                     : darkMode
                     ? "bg-yellow-900 border-l-4 border-yellow-500"
                     : "bg-yellow-50 border-l-4 border-yellow-500";
@@ -437,6 +522,11 @@ export default function TodoList() {
                   return (
                     <motion.li
                       key={task.id}
+                      onMouseDown={() => handleLongPress(task.id)}
+                      onTouchStart={() => handleLongPress(task.id)}
+                      onMouseUp={clearLongPress}
+                      onMouseLeave={clearLongPress}
+                      onTouchEnd={clearLongPress}
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -20 }}
@@ -447,42 +537,33 @@ export default function TodoList() {
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3 flex-1">
-                          <input
-                            type="checkbox"
-                            id={`checkbox-${task.id}`}
-                            checked={selectedTasks.includes(task.id)}
-                            onChange={() => toggleSelect(task.id)}
-                            className="peer hidden"
-                          />
-                          <label
-                            htmlFor={`checkbox-${task.id}`}
-                            className={`w-5 h-5 flex items-center justify-center border rounded cursor-pointer transition-colors duration-200
-                              ${
-                                selectedTasks.includes(task.id)
-                                  ? darkMode
-                                    ? "bg-emerald-600 border-emerald-600"
-                                    : "bg-emerald-500 border-emerald-500"
-                                  : darkMode
-                                  ? "border-gray-500 hover:border-emerald-400"
-                                  : "border-gray-300 hover:border-emerald-500"
-                              }
-                            `}
-                          >
-                            {selectedTasks.includes(task.id) && (
+                          {isSelectionMode && (
+                            <label className="inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedTasks.includes(task.id)}
+                                onChange={() => toggleSelect(task.id)}
+                                className="hidden"
+                              />
                               <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-3 w-3 text-white"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
+                                className={`w-5 h-5 border-2 rounded ${
+                                  selectedTasks.includes(task.id)
+                                    ? "border-emerald-500 bg-emerald-500"
+                                    : "border-gray-300"
+                                }`}
+                                viewBox="0 0 24 24"
                               >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                  clipRule="evenodd"
-                                />
+                                {selectedTasks.includes(task.id) && (
+                                  <path
+                                    fill="white"
+                                    stroke="white"
+                                    strokeWidth="2"
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                )}
                               </svg>
-                            )}
-                          </label>
+                            </label>
+                          )}{" "}
                           <button
                             onClick={() => toggleTask(task.id)}
                             className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors duration-200 ${
