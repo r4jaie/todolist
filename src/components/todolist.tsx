@@ -1,4 +1,4 @@
-// file: todolist.tsx
+// File: todolist.tsx
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +20,7 @@ type Task = {
   completed: boolean;
   deadline: string;
   priority?: number;
+  description?: string;
 };
 
 export default function TodoList() {
@@ -28,6 +29,7 @@ export default function TodoList() {
     {}
   );
   const [filter, setFilter] = useState<"all" | "done" | "not_done">("all");
+  const [priorityFilter, setPriorityFilter] = useState<number | "all">("all");
   const [darkMode, setDarkMode] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -38,34 +40,33 @@ export default function TodoList() {
     const now = new Date().getTime();
 
     return [...tasks].sort((a, b) => {
-      // Tugas yang sudah selesai selalu di bawah
+      // Tugas selesai
       if (a.completed && !b.completed) return 1;
       if (!a.completed && b.completed) return -1;
 
-      // Jika kedua tugas sudah selesai, urutkan berdasarkan deadline terbaru
+      // Berdasarkan deadline
       if (a.completed && b.completed) {
         return new Date(b.deadline).getTime() - new Date(a.deadline).getTime();
       }
 
-      // Untuk tugas yang belum selesai, urutkan berdasarkan deadline terdekat
+      // Berdasarkan deadline terdekat
       const aTime = new Date(a.deadline).getTime() - now;
       const bTime = new Date(b.deadline).getTime() - now;
 
-      // Jika deadline sudah lewat, tampilkan di atas
+      // Deadline sudah lewat, tampilkan di atas
       if (aTime < 0 && bTime >= 0) return -1;
       if (aTime >= 0 && bTime < 0) return 1;
 
-      // Urutkan berdasarkan waktu tersisa (yang lebih sedikit di atas)
       return aTime - bTime;
     });
   };
 
-  // Fungsi long-press handler
+  // Fungsi long-press
   const handleLongPress = (id: string) => {
     longPressTimer.current = setTimeout(() => {
       setIsSelectionMode(true);
       toggleSelect(id);
-    }, 500); // 500ms untuk long press
+    }, 500);
   };
 
   const clearLongPress = () => {
@@ -153,7 +154,7 @@ export default function TodoList() {
       setDarkMode(savedTheme === "dark");
       document.documentElement.classList.toggle("dark", savedTheme === "dark");
     } else {
-      // Default to user's preferred color scheme
+      // Mode Default
       const prefersDark = window.matchMedia(
         "(prefers-color-scheme: dark)"
       ).matches;
@@ -162,7 +163,7 @@ export default function TodoList() {
     }
   }, []);
 
-  // Toggle dark/light mode
+  // Dark/Light mode
   const toggleDarkMode = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
@@ -180,6 +181,7 @@ export default function TodoList() {
     const seconds = Math.floor((difference % (1000 * 60)) / 1000);
     return `${hours}j ${minutes}m ${seconds}d`;
   };
+
   // Add Task
   const addTask = async (): Promise<void> => {
     const { value: formValues } = await Swal.fire({
@@ -189,22 +191,28 @@ export default function TodoList() {
         '  <label for="swal-input1" class="block text-sm font-medium text-gray-700 mb-1">Nama Tugas</label>' +
         '  <input id="swal-input1" class="swal2-input w-full" placeholder="Masukkan nama tugas" required>' +
         "</div>" +
-        '<div class="text-left">' +
+        '<div class="text-left mb-4">' +
         '  <label for="swal-input2" class="block text-sm font-medium text-gray-700 mb-1">Deadline</label>' +
         '  <input id="swal-input2" type="datetime-local" class="swal2-input w-full" required>' +
+        "</div>" +
+        '<div class="text-left">' +
+        '  <label for="swal-input3" class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>' +
+        '  <textarea id="swal-input3" class="swal2-textarea w-full" placeholder="Tulis deskripsi tugas..."></textarea>' +
+        "</div>" +
+        '<div class="text-left mb-4">' +
+        '  <label for="swal-input4" class="block text-sm font-medium text-gray-700 mb-1">Prioritas</label>' +
+        '  <select id="swal-input4" class="swal2-input w-full">' +
+        '    <option value="1">Prioritas 1</option>' +
+        '    <option value="2" selected>Prioritas 2</option>' +
+        '    <option value="3">Prioritas 3</option>' +
+        "  </select>" +
         "</div>",
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Simpan",
       cancelButtonText: "Batal",
-      confirmButtonColor: "#059669", // emerald-600
-      cancelButtonColor: "#ef4444", // red-500
-      backdrop: `
-      rgba(0,0,0,0.4)
-      url("/images/nyan-cat.gif")
-      left top
-      no-repeat
-    `,
+      confirmButtonColor: "#059669",
+      cancelButtonColor: "#ef4444",
       preConfirm: () => {
         const taskName = (
           document.getElementById("swal-input1") as HTMLInputElement
@@ -212,13 +220,21 @@ export default function TodoList() {
         const deadline = (
           document.getElementById("swal-input2") as HTMLInputElement
         )?.value;
-
+        const description = (
+          document.getElementById("swal-input3") as HTMLTextAreaElement
+        )?.value;
+        const priority = parseInt(
+          (document.getElementById("swal-input4") as HTMLSelectElement)?.value
+        );
         if (!taskName || !deadline) {
           Swal.showValidationMessage("Harap isi semua field");
           return false;
         }
-
-        return [taskName, deadline];
+        if (description.length > 200) {
+          Swal.showValidationMessage("Deskripsi maksimal 200 karakter");
+          return false;
+        }
+        return [taskName, deadline, description, priority];
       },
     });
 
@@ -227,12 +243,15 @@ export default function TodoList() {
         text: formValues[0],
         completed: false,
         deadline: formValues[1],
+        description: formValues[2],
+        priority: formValues[3],
       };
       const docRef = await addDoc(collection(db, "tasks"), newTask);
       setTasks([...tasks, { id: docRef.id, ...newTask }]);
       toast.success("Tugas berhasil ditambahkan!");
     }
   };
+
   // Edit Task
   const editTask = async (task: Task): Promise<void> => {
     const { value: formValues } = await Swal.fire({
@@ -244,18 +263,32 @@ export default function TodoList() {
         task.text +
         '" placeholder="Masukkan nama tugas" required>' +
         "</div>" +
-        '<div class="text-left">' +
+        '<div class="text-left mb-4">' +
         '  <label for="swal-input2" class="block text-sm font-medium text-gray-700 mb-1">Deadline</label>' +
         '  <input id="swal-input2" type="datetime-local" class="swal2-input w-full" value="' +
         task.deadline +
         '" required>' +
+        "</div>" +
+        '<div class="text-left">' +
+        '  <label for="swal-input3" class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>' +
+        '  <textarea id="swal-input3" class="swal2-textarea w-full" placeholder="Tulis deskripsi tugas...">' +
+        (task.description || "") +
+        "</textarea>" +
+        "</div>" +
+        '<div class="text-left mb-4">' +
+        '  <label for="swal-input4" class="block text-sm font-medium text-gray-700 mb-1">Prioritas</label>' +
+        '  <select id="swal-input4" class="swal2-input w-full">' +
+        '    <option value="1">Prioritas 1</option>' +
+        '    <option value="2" selected>Prioritas 2</option>' +
+        '    <option value="3">Prioritas 3</option>' +
+        "  </select>" +
         "</div>",
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Simpan Perubahan",
       cancelButtonText: "Batal",
-      confirmButtonColor: "#059669", // emerald-600
-      cancelButtonColor: "#ef4444", // red-500
+      confirmButtonColor: "#059669",
+      cancelButtonColor: "#ef4444",
       preConfirm: () => {
         const taskName = (
           document.getElementById("swal-input1") as HTMLInputElement
@@ -263,13 +296,21 @@ export default function TodoList() {
         const deadline = (
           document.getElementById("swal-input2") as HTMLInputElement
         )?.value;
-
+        const description = (
+          document.getElementById("swal-input3") as HTMLTextAreaElement
+        )?.value;
+        const priority = parseInt(
+          (document.getElementById("swal-input4") as HTMLSelectElement)?.value
+        );
         if (!taskName || !deadline) {
           Swal.showValidationMessage("Harap isi semua field");
           return false;
         }
-
-        return [taskName, deadline];
+        if (description.length > 200) {
+          Swal.showValidationMessage("Deskripsi maksimal 200 karakter");
+          return false;
+        }
+        return [taskName, deadline, description, priority];
       },
     });
 
@@ -278,12 +319,15 @@ export default function TodoList() {
         ...task,
         text: formValues[0],
         deadline: formValues[1],
+        description: formValues[2],
+        priority: formValues[3],
       };
       await updateDoc(doc(db, "tasks", task.id), updatedTask);
       setTasks(tasks.map((t) => (t.id === task.id ? updatedTask : t)));
       toast.success("Tugas berhasil diperbarui!");
     }
   };
+
   // Delete Task
   const deleteTask = async (id: string): Promise<void> => {
     const result = await Swal.fire({
@@ -328,9 +372,15 @@ export default function TodoList() {
 
   const filteredTasks = sortTasksByPriority(
     tasks.filter((task) => {
-      if (filter === "done") return task.completed;
-      if (filter === "not_done") return !task.completed;
-      return true;
+      const matchStatus =
+        filter === "done"
+          ? task.completed
+          : filter === "not_done"
+          ? !task.completed
+          : true;
+      const matchPriority =
+        priorityFilter === "all" ? true : task.priority === priorityFilter;
+      return matchStatus && matchPriority;
     })
   );
 
@@ -430,19 +480,39 @@ export default function TodoList() {
               </svg>
               Tambah Tugas
             </button>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as typeof filter)}
-              className={`w-full sm:w-auto py-3 px-4 pr-8 rounded-lg shadow-sm focus:outline-none focus:ring-2 ${
-                darkMode
-                  ? "bg-gray-700 border-gray-600 text-white focus:ring-emerald-400 focus:border-emerald-400"
-                  : "bg-white border-gray-300 text-gray-700 focus:ring-emerald-500 focus:border-emerald-500"
-              }`}
-            >
-              <option value="all">Semua Tugas</option>
-              <option value="done">Tugas Selesai</option>
-              <option value="not_done">Tugas Belum Selesai</option>
-            </select>
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as typeof filter)}
+                className={`w-full sm:w-auto py-3 px-4 pr-8 rounded-lg shadow-sm focus:outline-none focus:ring-2 ${
+                  darkMode
+                    ? "bg-gray-700 border-gray-600 text-white focus:ring-emerald-400 focus:border-emerald-400"
+                    : "bg-white border-gray-300 text-gray-700 focus:ring-emerald-500 focus:border-emerald-500"
+                }`}
+              >
+                <option value="all">Semua Tugas</option>
+                <option value="done">Tugas Selesai</option>
+                <option value="not_done">Tugas Belum Selesai</option>
+              </select>
+              <select
+                value={priorityFilter}
+                onChange={(e) =>
+                  setPriorityFilter(
+                    e.target.value === "all" ? "all" : Number(e.target.value)
+                  )
+                }
+                className={`w-full sm:w-auto py-3 px-4 pr-8 rounded-lg shadow-sm focus:outline-none focus:ring-2 ${
+                  darkMode
+                    ? "bg-gray-700 border-gray-600 text-white focus:ring-emerald-400 focus:border-emerald-400"
+                    : "bg-white border-gray-300 text-gray-700 focus:ring-emerald-500 focus:border-emerald-500"
+                }`}
+              >
+                <option value="all">Semua Prioritas</option>
+                <option value="1">Prioritas 1</option>
+                <option value="2">Prioritas 2</option>
+                <option value="3">Prioritas 3</option>
+              </select>
+            </div>
           </div>
           {isSelectionMode && (
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
@@ -589,6 +659,19 @@ export default function TodoList() {
                               </svg>
                             )}
                           </button>
+                          <span
+                            className={`inline-block text-xs font-semibold px-2 py-1 rounded-full ml-1 ${
+                              task.priority === 1
+                                ? "bg-red-600 text-white"
+                                : task.priority === 2
+                                ? "bg-yellow-500 text-white"
+                                : task.priority === 3
+                                ? "bg-blue-500 text-white"
+                                : "bg-gray-400 text-white"
+                            }`}
+                          >
+                            P{task.priority || "-"}
+                          </span>
                           <div className="flex-1">
                             <span
                               className={`block text-lg ${
@@ -601,6 +684,41 @@ export default function TodoList() {
                             >
                               {task.text}
                             </span>
+                            {task.description && (
+                              <motion.div
+                                className="mt-2 text-sm"
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                transition={{ duration: 0.3 }}
+                              >
+                                <details
+                                  className={`group ${
+                                    darkMode ? "text-gray-300" : "text-gray-600"
+                                  }`}
+                                >
+                                  <summary className="flex items-center cursor-pointer font-medium gap-1">
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-4 w-4 group-open:rotate-180 transition-transform duration-200"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 9l-7 7-7-7"
+                                      />
+                                    </svg>
+                                    Deskripsi
+                                  </summary>
+                                  <p className="mt-1 whitespace-pre-wrap ml-5">
+                                    {task.description}
+                                  </p>
+                                </details>
+                              </motion.div>
+                            )}
                             <div
                               className={`flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm ${
                                 darkMode ? "text-gray-300" : "text-gray-500"

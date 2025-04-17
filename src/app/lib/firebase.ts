@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
-// isi konfigurasi sesuai dengan konfigurasi firebase kalian
+// Konfigurasi
 const firebaseConfig = {
   apiKey: "AIzaSyB83SH-1lA8JYR6Htm229DuaEksb5IAzJ4",
   authDomain: "to-do-list-ea930.firebaseapp.com",
@@ -12,7 +12,6 @@ const firebaseConfig = {
   measurementId: "G-JWF4G0D4QW",
 };
 
-// Inisialisasi Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
